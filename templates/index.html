@@ -1,0 +1,269 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, user-scalable=no"
+    />
+    <title>Rubik's Cube Solver</title>
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='css/style.css') }}"
+    />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://threejs.org/examples/js/controls/OrbitControls.js"></script>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <h1>🧩 Rubik's Cube Solver</h1>
+        <p>Advanced algorithms: Kociemba & Layer-by-Layer methods</p>
+      </div>
+
+      <div class="main-content">
+        <!-- Cube Display -->
+        <div class="cube-section">
+          <div class="cube-container">
+            <canvas id="cubeCanvas"></canvas>
+          </div>
+
+          <div class="cube-info">
+            <div class="status" id="cubeStatus">Ready</div>
+            <div class="move-counter">Moves: <span id="moveCount">0</span></div>
+          </div>
+
+          <!-- Cube Controls -->
+          <div class="cube-controls">
+            <div class="control-row">
+              <label for="cubeScale">Size:</label>
+              <input
+                type="range"
+                id="cubeScale"
+                min="0.5"
+                max="3"
+                step="0.1"
+                value="1"
+                class="slider"
+              />
+              <span id="scaleValue">1.0</span>
+            </div>
+            <div class="control-row">
+              <button id="resetViewBtn" class="btn secondary small">
+                Reset View
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Controls -->
+        <div class="controls-section">
+          <div class="control-group">
+            <h3>🎲 Cube Actions</h3>
+            <div class="cube-size-selector">
+              <label for="cubeSizeSelect">Cube Size:</label>
+              <select id="cubeSizeSelect" class="select-input small">
+                <option value="2">2x2 (Pocket)</option>
+                <option value="3" selected>3x3 (Standard)</option>
+                <option value="4">4x4 (Revenge)</option>
+                <option value="5">5x5 (Professor)</option>
+                <option value="6">6x6 (Master)</option>
+                <option value="7">7x7 (Grand Master)</option>
+              </select>
+              <div class="size-info" id="sizeInfo">
+                <small>3D visualization now supports all cube sizes!</small>
+              </div>
+            </div>
+            <div class="action-buttons">
+              <button id="scrambleBtn" class="btn primary">Scramble</button>
+              <button id="resetBtn" class="btn secondary">Reset</button>
+              <button id="solveBtn" class="btn success">Solve</button>
+            </div>
+          </div>
+
+          <div class="control-group">
+            <h3>⚙️ Algorithm</h3>
+            <div class="algorithm-controls">
+              <select id="algorithmSelect" class="select-input">
+                <option value="kociemba">Kociemba (Advanced)</option>
+                <option value="beginner">Layer-by-Layer (Beginner)</option>
+              </select>
+              <button
+                id="showHelpBtn"
+                class="btn secondary small help-btn"
+                title="Learn about algorithms"
+              >
+                ?
+              </button>
+            </div>
+            <div class="algorithm-info" id="algorithmInfo">
+              <small
+                ><strong>Kociemba:</strong> Optimal 2-phase algorithm for 3x3
+                cubes</small
+              >
+            </div>
+          </div>
+
+          <div class="control-group">
+            <h3>🎮 Manual Moves</h3>
+            <div class="move-buttons">
+              <button class="move-btn" data-move="F">F</button>
+              <button class="move-btn" data-move="F'">F'</button>
+              <button class="move-btn" data-move="R">R</button>
+              <button class="move-btn" data-move="R'">R'</button>
+              <button class="move-btn" data-move="U">U</button>
+              <button class="move-btn" data-move="U'">U'</button>
+            </div>
+            <div class="move-buttons">
+              <button class="move-btn" data-move="B">B</button>
+              <button class="move-btn" data-move="B'">B'</button>
+              <button class="move-btn" data-move="L">L</button>
+              <button class="move-btn" data-move="L'">L'</button>
+              <button class="move-btn" data-move="D">D</button>
+              <button class="move-btn" data-move="D'">D'</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Algorithm Help Section -->
+        <div class="help-section" id="helpSection" style="display: none">
+          <div class="help-header">
+            <h3>📚 Algorithm Guide</h3>
+            <button id="closeHelpBtn" class="btn secondary small">✕</button>
+          </div>
+
+          <div class="help-content">
+            <div class="algorithm-explanation">
+              <h4>🧠 Kociemba Algorithm (3x3 only)</h4>
+              <p>
+                The Kociemba algorithm is a two-phase method that guarantees
+                solving any 3x3 cube in 20 moves or less:
+              </p>
+              <ul>
+                <li>
+                  <strong>Phase 1:</strong> Orient edges and position corners to
+                  reach "G1" subgroup
+                </li>
+                <li>
+                  <strong>Phase 2:</strong> Solve the cube within G1 using only
+                  half-turns and U/D moves
+                </li>
+              </ul>
+              <p><em>Best for: Speed and optimality on 3x3 cubes</em></p>
+            </div>
+
+            <div class="algorithm-explanation">
+              <h4>🔄 Reduction Method (4x4, 5x5, NxN cubes)</h4>
+              <p>
+                The Reduction Method solves larger cubes by converting them into
+                3x3 equivalents:
+              </p>
+              <ol>
+                <li>
+                  <strong>Solve Centers:</strong> Group center pieces of each
+                  face into solid blocks
+                </li>
+                <li>
+                  <strong>Pair Edges:</strong> Match edge pieces together to
+                  form "super edges"
+                </li>
+                <li>
+                  <strong>Solve as 3x3:</strong> Use standard 3x3 algorithms on
+                  the reduced cube
+                </li>
+              </ol>
+              <p>
+                <strong>Why it works:</strong> After centers and edges are
+                solved, the larger cube behaves exactly like a 3x3 cube,
+                allowing us to use familiar solving techniques.
+              </p>
+              <p><em>Best for: All cube sizes larger than 3x3</em></p>
+            </div>
+
+            <div class="algorithm-explanation">
+              <h4>📚 Layer-by-Layer Method</h4>
+              <p>A step-by-step beginner-friendly approach:</p>
+              <ol>
+                <li>Solve bottom cross (white cross)</li>
+                <li>Complete first layer (white corners)</li>
+                <li>Solve middle layer edges</li>
+                <li>Form top cross (yellow cross)</li>
+                <li>Orient top corners (all yellow on top)</li>
+                <li>Position corners and edges correctly</li>
+              </ol>
+              <p>
+                <em>Best for: Learning and understanding cube mechanics</em>
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Solution Steps -->
+        <div
+          class="solution-section"
+          id="solutionSection"
+          style="display: none"
+        >
+          <div class="solution-header">
+            <h3>📋 Solution Steps</h3>
+            <div class="solution-stats">
+              <span class="stat"
+                >Algorithm: <span id="solutionAlgorithm">-</span></span
+              >
+              <span class="stat">Moves: <span id="solutionMoves">0</span></span>
+              <span class="stat">Time: <span id="solutionTime">0s</span></span>
+            </div>
+          </div>
+
+          <div class="solution-controls">
+            <button id="playBtn" class="btn primary">▶️ Play</button>
+            <button id="pauseBtn" class="btn secondary" disabled>
+              ⏸️ Pause
+            </button>
+            <button id="stepBtn" class="btn secondary">⏭️ Step</button>
+            <button id="resetSolutionBtn" class="btn warning">🔄 Reset</button>
+            <span class="speed-control">
+              Speed:
+              <input
+                type="range"
+                id="speedSlider"
+                min="1"
+                max="10"
+                value="5"
+                class="slider"
+              />
+            </span>
+          </div>
+
+          <div class="solution-steps" id="solutionSteps">
+            <!-- Steps will be populated here -->
+          </div>
+
+          <div class="current-step" id="currentStep">
+            Ready to play solution
+          </div>
+        </div>
+
+        <!-- Loading Overlay -->
+        <div class="loading-overlay" id="loadingOverlay" style="display: none">
+          <div class="loading-spinner"></div>
+          <div class="loading-text" id="loadingText">Processing...</div>
+        </div>
+      </div>
+
+      <div class="footer">
+        <p>Developed for AeroHack 2024 | Advanced Cube Solving Algorithms</p>
+        <p class="controls-help">
+          🎮 <strong>Controls:</strong>
+          Mouse: Rotate & Zoom | +/- Keys: Size | 0 Key: Reset View | Space:
+          Scramble | Enter: Solve
+        </p>
+      </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="{{ url_for('static', filename='js/cube-renderer.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/api-client.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+  </body>
+</html>
